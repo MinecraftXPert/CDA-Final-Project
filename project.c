@@ -120,7 +120,7 @@ int instruction_decode(unsigned op, struct_controls *controls)
         controls->MemtoReg = 2; // don't care
         controls->ALUOp = 0;    // don't care
         controls->MemWrite = 0;
-        controls->ALUSrc = 2; // don't care
+        controls->ALUSrc = 0;
         controls->RegWrite = 0;
     }
     // branch equal
@@ -380,6 +380,7 @@ void PC_update(unsigned jsec, unsigned extended_value, char Branch, char Jump, c
         else if (Zero == 0)
         {
             // branch isnt taken
+            *PC = *PC + 4;
         }
     }
 
