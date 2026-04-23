@@ -78,119 +78,124 @@ int instruction_fetch(unsigned PC, unsigned *Mem, unsigned *instruction)
     return 0;
 }
 
-/* instruction partition */
-/* 10 Points */
-// DONE
-void instruction_partition(unsigned instruction, unsigned *op, unsigned *r1, unsigned *r2, unsigned *r3, unsigned *funct, unsigned *offset, unsigned *jsec)
-{
-    // assign everything properly using bit shifting and masking
-    // first we shift to the start of where we want to grab our bits, then we mask everything by adding a bunch 1's with the width being the length of the bits and when we compare the 2 it'll give us the result we want
-    // note they're written in hexadecimal to make it easier to read
-
-    // get our op [bits 31-26] 6 bits
-    *op = (instruction >> 26) & 0x3F;
-    printf("[DEBUG IP] OP: %u\n", *op);
-
-    // get our r1 [bits 25-21] 5 bits
-    *r1 = (instruction >> 21) & 0x1F;
-    printf("[DEBUG IP] r1: %u\n", *r1);
-
-    // get our r2 [bits 20-16] 5 bits
-    *r2 = (instruction >> 16) & 0x1F;
-    printf("[DEBUG IP] r2: %u\n", *r2);
-
-    // get our r3 [bits 15-11] 5 bits
-    *r3 = (instruction >> 11) & 0x1F;
-    printf("[DEBUG IP] r3: %u\n", *r3);
-
-    // get our funct [bits 5-0] last 6 bits
-    *funct = (instruction >> 0) & 0x3F;
-    printf("[DEBUG IP] funct: %u\n", *funct);
-
-    // get our offset [bits 15-0] 16 bits
-    *offset = (instruction >> 0) & 0xFFFF;
-    printf("[DEBUG IP] Offset: %u\n", *offset);
-
-    // get our jsec [25-0] 26 bits
-    *jsec = (instruction >> 0) & 0x3FFFFFF;
-    printf("[DEBUG IP] jsec: %u\n", *jsec);
-}
-
 /* instruction decode */
 /* 15 Points */
 int instruction_decode(unsigned op, struct_controls *controls)
 {
-    // decode the op to tell the control what to do
-
-    // if the op is addi
-    if (op == 8)
-    {
-        // we're not writing or reading anything so don't enable them
+    // R-type
+    if (op == 0) {
+        controls->RegDst = 1;
+        controls->Jump = 0;
+        controls->Branch = 0;
         controls->MemRead = 0;
-        controls->MemWrite = 0;
-
-        // enable register write since we are writing to the register
-        controls->RegWrite = 1;
-
-        controls->RegDst = 0;
         controls->MemtoReg = 0;
-        controls->ALUSrc = 1;
-
-        // tell the alu to do addition since we're adding
-        controls->ALUOp = 0;
-    }
-
-    // if the op is lw
-    else if (op == 35)
-    {
-
-        // you read from memory to load into register
-        controls->MemRead = 1;
+        controls->ALUOp = 7; // look at funct
         controls->MemWrite = 0;
+        controls->ALUSrc = 0;
         controls->RegWrite = 1;
     }
-
-    // if the op is sw
-    else if (op == 43)
-    {
-        // you write from register and put it in memory (so you don't have to read from memory or write any registers)
+    // jump
+    else if (op == 2) {
+        controls->RegDst = 2; // don't care
+        controls->Jump = 1;
+        controls->Branch = 0;
         controls->MemRead = 0;
-        controls->MemWrite = 1;
+        controls->MemtoReg = 2; // don't care
+        controls->ALUOp = 0; // don't care
+        controls->MemWrite = 0;
+        controls->ALUSrc = 2; // don't care
         controls->RegWrite = 0;
     }
-
-    // if the op is lui (load upper immediate)
-    else if (op == 15)
-    {
+    // branch equal
+    else if (op == 4) {
+        controls->RegDst = 2; // don't care
+        controls->Jump = 0;
+        controls->Branch = 1;
+        controls->MemRead = 0;
+        controls->MemtoReg = 2; // don't care
+        controls->ALUOp = 1; // subtract for comparing
+        controls->MemWrite = 0;
+        controls->ALUSrc = 0;
+        controls->RegWrite = 0;
+    }
+    // add immediate
+    else if (op == 8) {
+        controls->RegDst = 0;
+        controls->Jump = 0;
+        controls->Branch = 0;
+        controls->MemRead = 0;
+        controls->MemtoReg = 0;
+        controls->ALUOp = 0; // add
+        controls->MemWrite = 0;
+        controls->ALUSrc = 1;
+        controls->RegWrite = 1;
+    }
+    // set less than immediate
+    else if (op == 10) {
+        controls->RegDst = 0;
+        controls->Jump = 0;
+        controls->Branch = 0;
+        controls->MemRead = 0;
+        controls->MemtoReg = 0;
+        controls->ALUOp = 2; // set less than
+        controls->MemWrite = 0;
+        controls->ALUSrc = 1;
+        controls->RegWrite = 1;
+    }
+    // set less than immediate unsigned
+    else if (op == 11) {
+        controls->RegDst = 0;
+        controls->Jump = 0;
+        controls->Branch = 0;
+        controls->MemRead = 0;
+        controls->MemtoReg = 0;
+        controls->ALUOp = 3; // set less than unsigned
+        controls->MemWrite = 0;
+        controls->ALUSrc = 1;
+        controls->RegWrite = 1;
+    }
+    // load upper immediate
+    else if (op == 15) {
+        controls->RegDst = 0;
+        controls->Jump = 0;
+        controls->Branch = 0;
+        controls->MemRead = 0;
+        controls->MemtoReg = 0;
+        controls->ALUOp = 6; // shift left 16
+        controls->MemWrite = 0;
+        controls->ALUSrc = 1;
+        controls->RegWrite = 1;
+    }
+    // load word
+    else if (op == 35) {
+        controls->RegDst = 0;
+        controls->Jump = 0;
+        controls->Branch = 0;
+        controls->MemRead = 1;
+        controls->MemtoReg = 1; // data comes from memory
+        controls->ALUOp = 0; // add
+        controls->MemWrite = 0;
+        controls->ALUSrc = 1;
+        controls->RegWrite = 1;
+    }
+    // store word
+    else if (op == 43) {
+        controls->RegDst = 2; // don't care
+        controls->Jump = 0;
+        controls->Branch = 0;
+        controls->MemRead = 0;
+        controls->MemtoReg = 2; // don't care
+        controls->ALUOp = 0; // add
+        controls->MemWrite = 1;
+        controls->ALUSrc = 1;
+        controls->RegWrite = 0;
+    }
+    // invalid op code
+    else {
+        return 1; // halt
     }
 
-    // if the op is beq (branch equal)
-    else if (op == 4)
-    {
-    }
-
-    // if the op is slti (set less than immediate)
-    else if (op == 10)
-    {
-    }
-
-    // if the op is sltiu (set less than immediate unsigned)
-    else if (op == 11)
-    {
-    }
-
-    // if the op is j (jump)
-    else if (op == 2)
-    {
-    }
-
-    // the rest of the r-type instructions
-    else if (op == 0)
-    {
-        controls->ALUOp = 7;
-    }
-
-    return 0;
+    return 0; // all good
 }
 
 /* Read Register */
@@ -279,7 +284,19 @@ int ALU_operations(unsigned data1, unsigned data2, unsigned extended_value, unsi
 /* 10 Points */
 int rw_memory(unsigned ALUresult, unsigned data2, char MemWrite, char MemRead, unsigned *memdata, unsigned *Mem)
 {
-    return 0;
+    // check if the instruction requires accessing memory at all
+    if (MemRead == 1 || MemWrite == 1) {
+        // condition 1: address must be word-aligned
+        if (ALUresult % 4 != 0) return 1;
+        // condition 2: address can't be beyond max memory
+        if (ALUresult > 0xFFFF) return 1;
+    }
+    // read from memory to memdata
+    if (MemRead == 1) *memdata = Mem[ALUresult >> 2];
+    // write data2 to memory
+    if (MemWrite == 1) Mem[ALUresult >> 2] = data2;
+
+    return 0; // all good
 }
 
 /* Write Register */
@@ -310,6 +327,20 @@ void write_register(unsigned r2, unsigned r3, unsigned memdata, unsigned ALUresu
 /* 10 Points */
 void PC_update(unsigned jsec, unsigned extended_value, char Branch, char Jump, char Zero, unsigned *PC)
 {
-    // updates program count by 4 to move on to the next instruction
-    *PC = *PC + 4;
+    if(Jump == 1){// we do a jump starter address (upper 4 bits)
+        *PC = ((*PC + 4) & 0xF0000000) | (jsec << 2);// 0xF0000000 extract the upper 4 bits
+    }
+    else if(Branch == 1){
+        if(Zero == 1){
+            *PC = (*PC + 4) + (extended_value << 2);
+        }
+        else if(Zero == 0){
+            //branch isnt taken
+        }
+    }
+
+    else{
+        // updates program count by 4 to move on to the next instruction
+        *PC = *PC + 4;
+    }
 }
