@@ -4,6 +4,7 @@
     NOTES:
 
     TODO: REMEMBER TO DELETE ANY PRINT STATEMENTS WITH [DEBUG] IN THEM AT THE END (or something at the beginning of it)
+    
     * Remember if there's any sort of debugging you want to do remember to put [DEBUG] or something like that so we know to delete them before submitting
 
     * I made sure to add lots of comments to help you understand the code a bit better lol
@@ -104,20 +105,23 @@ void read_register(unsigned r1, unsigned r2, unsigned *Reg, unsigned *data1, uns
 /* 10 Points */
 void sign_extend(unsigned offset, unsigned *extended_value)
 {
-    // extend the offset by an extended value (i'll delete these others later lol)
+    // extend the offset by an extended value by either 1 or 0 depending on the 16th bit (i'll delete these others later lol)
     // for example: 100 = (0110 0100). we can extend this by another 8 bits by taking the left-most bit (0) and adding 8 more zeroes in front. Then if it's for example 1 as the left-most bit, take that and add 8 1's
     // so in this case we get the left-most bit in our 16 bit offset and add 16 more 1's or 0's depending on that bit is
 
     // get the 16tth bit
     unsigned int bit16 = (offset >> 15) & 1;
 
-    // if it's 0, add 16 more 0's to the front
-    if (bit16 == 0) {
+    // if it's 0, keep it as is
+    if (bit16 == 0)
+    {
         *extended_value = offset;
-    } else if (bit16 == 1) { // otherwise add 16 1's to the front
-        *extended_value = (offset >> 15) & 0xFFFF; // TODO: fix tomorrow I guess...
     }
-    printf("[DEBUG SE] New offset: %08x\n", *extended_value);
+    else if (bit16 == 1)
+    { // otherwise add 16 1's to the front (compare the offset with 16 1's and check with OR to add 1's to everything)
+        *extended_value = (offset) | 0xFFFF0000;
+    }
+    printf("[DEBUG SE] Extended Offset: %08x\n", *extended_value);
 }
 
 /* ALU operations */
