@@ -108,8 +108,16 @@ void sign_extend(unsigned offset, unsigned *extended_value)
     // for example: 100 = (0110 0100). we can extend this by another 8 bits by taking the left-most bit (0) and adding 8 more zeroes in front. Then if it's for example 1 as the left-most bit, take that and add 8 1's
     // so in this case we get the left-most bit in our 16 bit offset and add 16 more 1's or 0's depending on that bit is
 
-    
-    printf("[DEBUG SE] New offset: %u\n", offset);
+    // get the 16tth bit
+    unsigned int bit16 = (offset >> 15) & 1;
+
+    // if it's 0, add 16 more 0's to the front
+    if (bit16 == 0) {
+        *extended_value = offset;
+    } else if (bit16 == 1) { // otherwise add 16 1's to the front
+        *extended_value = (offset >> 15) & 0xFFFF; // TODO: fix tomorrow I guess...
+    }
+    printf("[DEBUG SE] New offset: %08x\n", *extended_value);
 }
 
 /* ALU operations */
