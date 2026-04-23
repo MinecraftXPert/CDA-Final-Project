@@ -1,67 +1,55 @@
 #include "spimcore.h"
 
-/*
-    NOTES:
-
-    TODO: REMEMBER TO DELETE ANY PRINT STATEMENTS WITH [DEBUG] IN THEM AT THE END (or something at the beginning of it)
-    
-    * Remember if there's any sort of debugging you want to do remember to put [DEBUG] or something like that so we know to delete them before submitting
-
-    * I made sure to add lots of comments to help you understand the code a bit better lol
-*/
-
 /* ALU */
 /* 10 Points */
 void ALU(unsigned A, unsigned B, char ALUControl, unsigned *ALUresult, char *Zero)
 {
-    switch (ALUControl){
-        case 0: // addition
-            *ALUresult = A+B;
-            break;
-        case 1: // subtraction
-            *ALUresult = A-B;
-            break;
-        case 2: // compare as signed
-            if ((int)A < (int)B)
-                *ALUresult = 1;
-            else *ALUresult = 0;
-            break;
-        case 3: // compare as unsigned
-            if (A < B)
-                *ALUresult = 1;
-            else *ALUresult = 0;
-            break;
-        case 4: // AND operation
-            *ALUresult = A&B;
-            break;
-        case 5: // OR operation
-            *ALUresult = A|B;
-            break;
-        case 6: // Shift B left by 16 bits
-            *ALUresult = B << 16;
-            break;
-        case 7: // Not operation on A
-            *ALUresult = ~A;
-            break;
-        default:
-            break;
+    switch (ALUControl)
+    {
+    case 0: // addition
+        *ALUresult = A + B;
+        break;
+    case 1: // subtraction
+        *ALUresult = A - B;
+        break;
+    case 2: // compare as signed
+        if ((int)A < (int)B)
+            *ALUresult = 1;
+        else
+            *ALUresult = 0;
+        break;
+    case 3: // compare as unsigned
+        if (A < B)
+            *ALUresult = 1;
+        else
+            *ALUresult = 0;
+        break;
+    case 4: // AND operation
+        *ALUresult = A & B;
+        break;
+    case 5: // OR operation
+        *ALUresult = A | B;
+        break;
+    case 6: // Shift B left by 16 bits
+        *ALUresult = B << 16;
+        break;
+    case 7: // Not operation on A
+        *ALUresult = ~A;
+        break;
+    default:
+        break;
     }
     // set 0 flag
-    if (*ALUresult==0) *Zero = 1;
-    else *Zero = 0;
+    if (*ALUresult == 0)
+        *Zero = 1;
+    else
+        *Zero = 0;
 }
 
 /* instruction fetch */
 /* 10 Points */
-// DONE
-//  NOTE: There's a lot of print statements to make sense of everything but it'll get deleted once I'm done and it'll only be like 3 or 4 lines of code lol
 int instruction_fetch(unsigned PC, unsigned *Mem, unsigned *instruction)
 {
-
-    // testing stuff
-    printf("[DEBUG IF] PC: %04x\n", PC);
-    printf("[DEBUG IF] Memory: %08x\n", Mem[PC >> 2]);
-
     // checks if the PC we're given is not divisble by 4 because we can't read the instruction in that case and the program will halt
     if (PC % 4 != 0)
     {
@@ -71,11 +59,38 @@ int instruction_fetch(unsigned PC, unsigned *Mem, unsigned *instruction)
     // grab the instruction in it into the instruction pointer for instruction_partition to read
     *instruction = Mem[PC >> 2];
 
-    // finally worked lol
-    printf("[DEBUG IF] Instruction in hexadecimal: %08x\n", *instruction);
-
     // return 0 (meaning we can continue on)
     return 0;
+}
+
+/* instruction partition */
+/* 10 Points */
+void instruction_partition(unsigned instruction, unsigned *op, unsigned *r1, unsigned *r2, unsigned *r3, unsigned *funct, unsigned *offset, unsigned *jsec)
+{
+    // assign everything properly using bit shifting and masking
+    // first we shift to the start of where we want to grab our bits, then we mask everything by adding a bunch 1's with the width being the length of the bits and when we compare the 2 it'll give us the result we want
+    // note they're written in hexadecimal to make it easier to read
+
+    // get our op [bits 31-26] 6 bits
+    *op = (instruction >> 26) & 0x3F;
+
+    // get our r1 [bits 25-21] 5 bits
+    *r1 = (instruction >> 21) & 0x1F;
+
+    // get our r2 [bits 20-16] 5 bits
+    *r2 = (instruction >> 16) & 0x1F;
+
+    // get our r3 [bits 15-11] 5 bits
+    *r3 = (instruction >> 11) & 0x1F;
+
+    // get our funct [bits 5-0] last 6 bits
+    *funct = (instruction >> 0) & 0x3F;
+
+    // get our offset [bits 15-0] 16 bits
+    *offset = (instruction >> 0) & 0xFFFF;
+
+    // get our jsec [25-0] 26 bits
+    *jsec = (instruction >> 0) & 0x3FFFFFF;
 }
 
 /* instruction decode */
@@ -83,7 +98,8 @@ int instruction_fetch(unsigned PC, unsigned *Mem, unsigned *instruction)
 int instruction_decode(unsigned op, struct_controls *controls)
 {
     // R-type
-    if (op == 0) {
+    if (op == 0)
+    {
         controls->RegDst = 1;
         controls->Jump = 0;
         controls->Branch = 0;
@@ -95,31 +111,34 @@ int instruction_decode(unsigned op, struct_controls *controls)
         controls->RegWrite = 1;
     }
     // jump
-    else if (op == 2) {
+    else if (op == 2)
+    {
         controls->RegDst = 2; // don't care
         controls->Jump = 1;
         controls->Branch = 0;
         controls->MemRead = 0;
         controls->MemtoReg = 2; // don't care
-        controls->ALUOp = 0; // don't care
+        controls->ALUOp = 0;    // don't care
         controls->MemWrite = 0;
-        controls->ALUSrc = 2; // don't care
+        controls->ALUSrc = 0;
         controls->RegWrite = 0;
     }
     // branch equal
-    else if (op == 4) {
+    else if (op == 4)
+    {
         controls->RegDst = 2; // don't care
         controls->Jump = 0;
         controls->Branch = 1;
         controls->MemRead = 0;
         controls->MemtoReg = 2; // don't care
-        controls->ALUOp = 1; // subtract for comparing
+        controls->ALUOp = 1;    // subtract for comparing
         controls->MemWrite = 0;
         controls->ALUSrc = 0;
         controls->RegWrite = 0;
     }
     // add immediate
-    else if (op == 8) {
+    else if (op == 8)
+    {
         controls->RegDst = 0;
         controls->Jump = 0;
         controls->Branch = 0;
@@ -131,7 +150,8 @@ int instruction_decode(unsigned op, struct_controls *controls)
         controls->RegWrite = 1;
     }
     // set less than immediate
-    else if (op == 10) {
+    else if (op == 10)
+    {
         controls->RegDst = 0;
         controls->Jump = 0;
         controls->Branch = 0;
@@ -143,7 +163,8 @@ int instruction_decode(unsigned op, struct_controls *controls)
         controls->RegWrite = 1;
     }
     // set less than immediate unsigned
-    else if (op == 11) {
+    else if (op == 11)
+    {
         controls->RegDst = 0;
         controls->Jump = 0;
         controls->Branch = 0;
@@ -155,7 +176,8 @@ int instruction_decode(unsigned op, struct_controls *controls)
         controls->RegWrite = 1;
     }
     // load upper immediate
-    else if (op == 15) {
+    else if (op == 15)
+    {
         controls->RegDst = 0;
         controls->Jump = 0;
         controls->Branch = 0;
@@ -167,31 +189,34 @@ int instruction_decode(unsigned op, struct_controls *controls)
         controls->RegWrite = 1;
     }
     // load word
-    else if (op == 35) {
+    else if (op == 35)
+    {
         controls->RegDst = 0;
         controls->Jump = 0;
         controls->Branch = 0;
         controls->MemRead = 1;
         controls->MemtoReg = 1; // data comes from memory
-        controls->ALUOp = 0; // add
+        controls->ALUOp = 0;    // add
         controls->MemWrite = 0;
         controls->ALUSrc = 1;
         controls->RegWrite = 1;
     }
     // store word
-    else if (op == 43) {
+    else if (op == 43)
+    {
         controls->RegDst = 2; // don't care
         controls->Jump = 0;
         controls->Branch = 0;
         controls->MemRead = 0;
         controls->MemtoReg = 2; // don't care
-        controls->ALUOp = 0; // add
+        controls->ALUOp = 0;    // add
         controls->MemWrite = 1;
         controls->ALUSrc = 1;
         controls->RegWrite = 0;
     }
     // invalid op code
-    else {
+    else
+    {
         return 1; // halt
     }
 
@@ -202,13 +227,9 @@ int instruction_decode(unsigned op, struct_controls *controls)
 /* 5 Points */
 void read_register(unsigned r1, unsigned r2, unsigned *Reg, unsigned *data1, unsigned *data2)
 {
-    // i think this is how it's supposed to be done but idk lol I don't think it's too complicated
-
     // put into data1 whatever our first register we use is in our "array" of registers, and then do the same for register 2
     *data1 = Reg[r1];
     *data2 = Reg[r2];
-    printf("[DEBUG RR] Data 1: %u\n", *data1);
-    printf("[DEBUG RR] Data 2: %u\n", *data2);
 }
 
 /* Sign Extend */
@@ -231,7 +252,6 @@ void sign_extend(unsigned offset, unsigned *extended_value)
     { // otherwise add 16 1's to the front (compare the offset with 16 1's and check with OR to add 1's to everything)
         *extended_value = (offset) | 0xFFFF0000;
     }
-    printf("[DEBUG SE] Extended Offset: %08x\n", *extended_value);
 }
 
 /* ALU operations */
@@ -239,42 +259,49 @@ void sign_extend(unsigned offset, unsigned *extended_value)
 int ALU_operations(unsigned data1, unsigned data2, unsigned extended_value, unsigned funct, char ALUOp, char ALUSrc, unsigned *ALUresult, char *Zero)
 {
     // check if the operator is acceptable and not R-type
-    if (ALUOp < 7 && ALUOp >= 0) {
+    if (ALUOp < 7 && ALUOp >= 0)
+    {
         // check if the extended value has to be used
-        if (ALUSrc == 1) ALU(data1, extended_value, ALUOp, ALUresult, Zero);
+        if (ALUSrc == 1)
+            ALU(data1, extended_value, ALUOp, ALUresult, Zero);
         // if not, use regular data2
-        else if (ALUSrc == 0) ALU(data1, data2, ALUOp, ALUresult, Zero);  
+        else if (ALUSrc == 0)
+            ALU(data1, data2, ALUOp, ALUresult, Zero);
         // ALUSrc was invalid, halt
-        else return 1; 
-    } 
+        else
+            return 1;
+    }
     // check if we need R-types now
-    else if (ALUOp == 7) {
+    else if (ALUOp == 7)
+    {
         // switch case to handle each funct code and perform the corresponding operation
-        switch(funct) {
-            case 32:
-                ALU(data1, data2, 0, ALUresult, Zero);
-                break;
-            case 34:
-                ALU(data1, data2, 1, ALUresult, Zero);
-                break;
-            case 36:
-                ALU(data1, data2, 4, ALUresult, Zero);
-                break;
-            case 37:
-                ALU(data1, data2, 5, ALUresult, Zero);
-                break;
-            case 42:
-                ALU(data1, data2, 2, ALUresult, Zero);
-                break;
-            case 43:
-                ALU(data1, data2, 3, ALUresult, Zero);
-                break;
-            default:
-                return 1; 
+        switch (funct)
+        {
+        case 32:
+            ALU(data1, data2, 0, ALUresult, Zero);
+            break;
+        case 34:
+            ALU(data1, data2, 1, ALUresult, Zero);
+            break;
+        case 36:
+            ALU(data1, data2, 4, ALUresult, Zero);
+            break;
+        case 37:
+            ALU(data1, data2, 5, ALUresult, Zero);
+            break;
+        case 42:
+            ALU(data1, data2, 2, ALUresult, Zero);
+            break;
+        case 43:
+            ALU(data1, data2, 3, ALUresult, Zero);
+            break;
+        default:
+            return 1;
         }
-    } 
+    }
     // invalid ALU0p, halt
-    else return 1;
+    else
+        return 1;
 
     // everything went well
     return 0;
@@ -285,16 +312,21 @@ int ALU_operations(unsigned data1, unsigned data2, unsigned extended_value, unsi
 int rw_memory(unsigned ALUresult, unsigned data2, char MemWrite, char MemRead, unsigned *memdata, unsigned *Mem)
 {
     // check if the instruction requires accessing memory at all
-    if (MemRead == 1 || MemWrite == 1) {
+    if (MemRead == 1 || MemWrite == 1)
+    {
         // condition 1: address must be word-aligned
-        if (ALUresult % 4 != 0) return 1;
+        if (ALUresult % 4 != 0)
+            return 1;
         // condition 2: address can't be beyond max memory
-        if (ALUresult > 0xFFFF) return 1;
+        if (ALUresult > 0xFFFF)
+            return 1;
     }
     // read from memory to memdata
-    if (MemRead == 1) *memdata = Mem[ALUresult >> 2];
+    if (MemRead == 1)
+        *memdata = Mem[ALUresult >> 2];
     // write data2 to memory
-    if (MemWrite == 1) Mem[ALUresult >> 2] = data2;
+    if (MemWrite == 1)
+        Mem[ALUresult >> 2] = data2;
 
     return 0; // all good
 }
@@ -308,17 +340,25 @@ void write_register(unsigned r2, unsigned r3, unsigned memdata, unsigned ALUresu
     if regwrite = 0, no data, if 1, proceed
     */
 
-    if(RegWrite == 0){// do nothing
+    if (RegWrite == 0)
+    { // do nothing
         return;
     }
-    else if(RegWrite == 1){
-        if(MemtoReg == 1){// you write memdata
-            if(RegDst == 0) Reg[r2] = memdata;
-            else if(RegDst == 1) Reg[r3] = memdata;
+    else if (RegWrite == 1)
+    {
+        if (MemtoReg == 1)
+        { // you write memdata
+            if (RegDst == 0)
+                Reg[r2] = memdata;
+            else if (RegDst == 1)
+                Reg[r3] = memdata;
         }
-        else if(MemtoReg == 0){// you write ALU result
-            if(RegDst == 0) Reg[r2] = ALUresult;
-            else if(RegDst == 1) Reg[r3] = ALUresult;
+        else if (MemtoReg == 0)
+        { // you write ALU result
+            if (RegDst == 0)
+                Reg[r2] = ALUresult;
+            else if (RegDst == 1)
+                Reg[r3] = ALUresult;
         }
     }
 }
@@ -327,19 +367,25 @@ void write_register(unsigned r2, unsigned r3, unsigned memdata, unsigned ALUresu
 /* 10 Points */
 void PC_update(unsigned jsec, unsigned extended_value, char Branch, char Jump, char Zero, unsigned *PC)
 {
-    if(Jump == 1){// we do a jump starter address (upper 4 bits)
-        *PC = ((*PC + 4) & 0xF0000000) | (jsec << 2);// 0xF0000000 extract the upper 4 bits
+    if (Jump == 1)
+    {                                                 // we do a jump starter address (upper 4 bits)
+        *PC = ((*PC + 4) & 0xF0000000) | (jsec << 2); // 0xF0000000 extract the upper 4 bits
     }
-    else if(Branch == 1){
-        if(Zero == 1){
+    else if (Branch == 1)
+    {
+        if (Zero == 1)
+        {
             *PC = (*PC + 4) + (extended_value << 2);
         }
-        else if(Zero == 0){
-            //branch isnt taken
+        else if (Zero == 0)
+        {
+            // branch isnt taken
+            *PC = *PC + 4;
         }
     }
 
-    else{
+    else
+    {
         // updates program count by 4 to move on to the next instruction
         *PC = *PC + 4;
     }
